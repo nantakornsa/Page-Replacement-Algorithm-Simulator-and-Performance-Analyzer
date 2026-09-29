@@ -30,8 +30,34 @@ page-replacement-simulator/
 │       └── SystemMetrics.java        # Timing / heap usage
 ├── src/test/java/com/simulator/algorithm/   # JUnit 5 tests per algorithm
 ├── traces/                           # Sample reference-string files
+├── web/
+│   └── index.html                    # Standalone visualizer (no build step)
 ├── pom.xml
 └── README.md
+```
+
+## Web visualizer
+
+`web/index.html` is a self-contained, dependency-free HTML page that
+simulates FIFO / LRU / OPT / Clock step-by-step in the browser and shows a
+live execution log alongside the frame state. It's a visual companion to the
+CLI, not a replacement for it — the two are independent (the page reimplements
+the same algorithm logic in JavaScript, it doesn't call the Java code).
+
+Open it directly, no server needed:
+
+```bash
+# any of these work
+open web/index.html          # macOS
+xdg-open web/index.html      # Linux
+start web/index.html         # Windows
+```
+
+Or serve it if you'd rather not open files directly from disk:
+
+```bash
+cd web && python3 -m http.server 8000
+# then visit http://localhost:8000
 ```
 
 ## Requirements

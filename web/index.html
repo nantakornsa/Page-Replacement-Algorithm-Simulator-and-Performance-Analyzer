@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Page Replacement Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D1117; --panel:#141B22; --panel2:#0F151B; --border:#26313D;
+  --text:#E6EDF3; --dim:#7E8C99; --dim2:#4C5866;
+  --blue:#5AA9FF; --green:#3FBE6E; --red:#F0564C; --amber:#F2A93B;
+  --radius:10px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F5F7F9; --panel:#FFFFFF; --panel2:#EDF1F4; --border:#DDE3E8;
+    --text:#16202A; --dim:#5C6B78; --dim2:#93A0AB;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F5F7F9; --panel:#FFFFFF; --panel2:#EDF1F4; --border:#DDE3E8;
+  --text:#16202A; --dim:#5C6B78; --dim2:#93A0AB;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  min-height:100vh; padding:20px 16px 40px;
+}
+h1,h2,.brand{font-family:'Space Grotesk',sans-serif;}
+.wrap{max-width:1180px; margin:0 auto;}
+header{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+header .brand{font-size:22px; font-weight:700; letter-spacing:-0.01em;}
+header p{margin:0; color:var(--dim); font-size:13px;}
+
+.panel{
+  background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px;
+}
+.grid{display:grid; grid-template-columns:1.35fr 1fr; gap:16px;}
+@media (max-width:880px){ .grid{grid-template-columns:1fr;} }
+
+.controls{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:16px;}
+.field{display:flex; flex-direction:column; gap:4px;}
+.field label{font-size:11px; color:var(--dim); text-transform:lowercase;}
+input[type=text],input[type=number]{
+  background:var(--panel2); border:1px solid var(--border); color:var(--text);
+  border-radius:7px; padding:7px 9px; font-family:inherit; font-size:13px; width:100%;
+}
+input[type=number]{width:64px;}
+.seg{display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:7px; overflow:hidden;}
+.seg button{
+  background:transparent; border:none; color:var(--dim); padding:7px 13px; font-family:inherit;
+  font-size:13px; cursor:pointer; border-right:1px solid var(--border);
+}
+.seg button:last-child{border-right:none;}
+.seg button.active{background:var(--blue); color:#06121F; font-weight:600;}
+.btn{
+  background:var(--panel2); border:1px solid var(--border); color:var(--text);
+  border-radius:7px; padding:7px 12px; font-family:inherit; font-size:13px; cursor:pointer;
+}
+.btn:hover{border-color:var(--blue);}
+.btn.primary{background:var(--blue); color:#06121F; border-color:var(--blue); font-weight:600;}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+.transport{display:flex; gap:8px; align-items:center;}
+.trace-row{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;}
+.trace-row .field:first-child{flex:1; min-width:220px;}
+
+.tape{display:flex; gap:5px; overflow-x:auto; padding:10px 2px 14px; border-bottom:1px solid var(--border); margin-bottom:14px;}
+.chip{
+  flex:0 0 auto; min-width:26px; text-align:center; padding:5px 7px; border-radius:6px;
+  font-size:12px; color:var(--dim2); border:1px solid transparent; transition:.15s;
+}
+.chip.past{color:var(--dim);}
+.chip.now{background:var(--blue); color:#06121F; font-weight:700; border-color:var(--blue);}
+
+.frames{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+.frame{
+  width:78px; height:78px; border-radius:10px; border:2px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:var(--panel2); position:relative; transition:border-color .2s, background .2s;
+}
+.frame .num{font-size:22px; font-weight:600;}
+.frame .lbl{font-size:10px; color:var(--dim); margin-top:2px;}
+.frame.hit{border-color:var(--green); background:color-mix(in srgb, var(--green) 16%, var(--panel2));}
+.frame.fault{border-color:var(--red); background:color-mix(in srgb, var(--red) 16%, var(--panel2));}
+.frame .dot{position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background:var(--dim2);}
+.frame .dot.on{background:var(--amber);}
+.frame .hand{position:absolute; bottom:-9px; font-size:11px; color:var(--amber);}
+
+.stats{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--dim); margin-bottom:4px;}
+.stats b{color:var(--text); font-size:15px;}
+.stats .green{color:var(--green);} .stats .red{color:var(--red);}
+
+.log{
+  background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+  height:420px; overflow-y:auto; padding:10px 12px; font-size:12.5px; line-height:1.55;
+}
+.log .row{white-space:pre; color:var(--dim);}
+.log .row.fault{color:var(--red);}
+.log .row.hit{color:var(--green);}
+.log .row.cur{background:color-mix(in srgb, var(--blue) 12%, transparent); border-radius:4px;}
+
+footer{margin-top:16px; color:var(--dim2); font-size:11.5px;}
+::-webkit-scrollbar{height:8px; width:8px;}
+::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">🧠 Page Replacement Visualizer</span>
+  </header>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="trace-row">
+      <div class="field">
+        <label>reference string (คั่นด้วย comma/space)</label>
+        <input type="text" id="refInput" value="7,0,1,2,0,3,0,4,2,3,0,3,2,1,2,0,1,7,0,1">
+      </div>
+      <div class="field">
+        <label>frames</label>
+        <input type="number" id="frameCount" value="3" min="1" max="8">
+      </div>
+      <button class="btn" id="applyBtn">ใช้ค่านี้</button>
+      <button class="btn" id="randomBtn">สุ่มใหม่</button>
+    </div>
+
+    <div class="controls" style="margin-top:14px; margin-bottom:0;">
+      <div class="field">
+        <label>algorithm</label>
+        <div class="seg" id="algoSeg">
+          <button data-algo="fifo" class="active">FIFO</button>
+          <button data-algo="lru">LRU</button>
+          <button data-algo="opt">OPT</button>
+          <button data-algo="clock">CLOCK</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>transport</label>
+        <div class="transport">
+          <button class="btn" id="resetBtn">⟲ reset</button>
+          <button class="btn" id="stepBtn">→ step</button>
+          <button class="btn primary" id="playBtn">▶ play</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>speed</label>
+        <input type="range" id="speed" min="100" max="1200" value="500" step="100">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="tape" id="tape"></div>
+      <div class="frames" id="frames"></div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="panel">
+      <div style="font-size:12px; color:var(--dim); margin-bottom:6px;">execution log</div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function simulate(algo, refs, n){
+  const steps = [];
+  if(algo==='fifo'){
+    let frames=[], queue=[];
+    for(let i=0;i<refs.length;i++){
+      const p=refs[i]; let fault=false, evicted=-1;
+      if(!frames.includes(p)){
+        fault=true;
+        if(frames.length>=n){ evicted=queue.shift(); frames=frames.filter(x=>x!==evicted); }
+        frames.push(p); queue.push(p);
+      }
+      steps.push({p,fault,evicted,slots:pad(frames,n)});
+    }
+  } else if(algo==='lru'){
+    let frames=[];
+    for(let i=0;i<refs.length;i++){
+      const p=refs[i]; let fault=false, evicted=-1;
+      const idx=frames.indexOf(p);
+      if(idx>=0){ frames.splice(idx,1); frames.push(p); }
+      else{
+        fault=true;
+        if(frames.length>=n){ evicted=frames.shift(); }
+        frames.push(p);
+      }
+      steps.push({p,fault,evicted,slots:pad(frames,n)});
+    }
+  } else if(algo==='opt'){
+    let frames=[];
+    for(let i=0;i<refs.length;i++){
+      const p=refs[i]; let fault=false, evicted=-1;
+      if(!frames.includes(p)){
+        fault=true;
+        if(frames.length>=n){
+          let victim=-1, furthest=-1;
+          for(const c of frames){
+            let next=refs.slice(i+1).indexOf(c);
+            next = next===-1 ? Infinity : next;
+            if(next===Infinity){ victim=c; break; }
+            if(next>furthest){ furthest=next; victim=c; }
+          }
+          evicted=victim; frames=frames.filter(x=>x!==victim);
+        }
+        frames.push(p);
+      }
+      steps.push({p,fault,evicted,slots:pad(frames,n)});
+    }
+  } else if(algo==='clock'){
+    let frames=new Array(n).fill(null), ref=new Array(n).fill(false);
+    let hand=0, filled=0;
+    for(let i=0;i<refs.length;i++){
+      const p=refs[i]; let fault=false, evicted=-1;
+      const idx=frames.indexOf(p);
+      if(idx>=0){ ref[idx]=true; }
+      else{
+        fault=true;
+        if(filled<n){ frames[filled]=p; ref[filled]=true; filled++; }
+        else{
+          while(ref[hand]){ ref[hand]=false; hand=(hand+1)%n; }
+          evicted=frames[hand]; frames[hand]=p; ref[hand]=true;
+          hand=(hand+1)%n;
+        }
+      }
+      steps.push({p,fault,evicted,slots:frames.slice(),refBits:ref.slice(),hand});
+    }
+  }
+  return steps;
+}
+function pad(arr,n){ const s=arr.slice(); while(s.length<n) s.push(null); return s; }
+
+const el = id => document.getElementById(id);
+let refs = [], numFrames = 3, algo = 'fifo', steps = [], cursor = -1, timer = null;
+
+function parseRefs(str){
+  return str.split(/[,\s]+/).map(t=>t.trim()).filter(Boolean).map(Number).filter(n=>!isNaN(n));
+}
+
+function build(){
+  refs = parseRefs(el('refInput').value);
+  numFrames = Math.max(1, Math.min(8, parseInt(el('frameCount').value)||3));
+  steps = simulate(algo, refs, numFrames);
+  cursor = -1;
+  stopPlay();
+  renderTape();
+  renderLogSkeleton();
+  renderFrames();
+  renderStats();
+}
+
+function renderTape(){
+  el('tape').innerHTML = refs.map((r,i)=>
+    `<span class="chip" data-idx="${i}">${r}</span>`).join('');
+}
+
+function renderLogSkeleton(){
+  el('log').innerHTML = '';
+}
+
+function renderFrames(){
+  const box = el('frames'); box.innerHTML = '';
+  const st = cursor>=0 ? steps[cursor] : null;
+  const slots = st ? st.slots : new Array(numFrames).fill(null);
+  for(let i=0;i<numFrames;i++){
+    const v = slots[i];
+    const div = document.createElement('div');
+    let cls = 'frame';
+    if(st && v!==null){
+      if(st.fault && st.evicted===-1 && v===st.p && i===lastFilledIndex(slots)) cls+=' fault';
+      else if(st.fault && v===st.p) cls+=' fault';
+      else if(!st.fault && v===st.p) cls+=' hit';
+    }
+    div.className = cls;
+    div.innerHTML = `<div class="num">${v===null?'·':v}</div><div class="lbl">F${i}</div>`;
+    if(algo==='clock' && st){
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (st.refBits && st.refBits[i] ? ' on' : '');
+      div.appendChild(dot);
+      if(st.hand===i){
+        const hand = document.createElement('div');
+        hand.className = 'hand'; hand.textContent = '▲ hand';
+        div.appendChild(hand);
+      }
+    }
+    box.appendChild(div);
+  }
+}
+function lastFilledIndex(slots){
+  for(let i=slots.length-1;i>=0;i--) if(slots[i]!==null) return i;
+  return -1;
+}
+
+function renderStats(){
+  const done = steps.slice(0, cursor+1);
+  const faults = done.filter(s=>s.fault).length;
+  const hits = done.length - faults;
+  const rate = done.length ? (hits/done.length*100).toFixed(1) : '0.0';
+  el('stats').innerHTML = `
+    <span>step <b>${cursor+1}</b> / ${steps.length}</span>
+    <span class="red">faults <b>${faults}</b></span>
+    <span class="green">hits <b>${hits}</b></span>
+    <span>hit rate <b>${rate}%</b></span>`;
+}
+
+function appendLog(i){
+  const s = steps[i];
+  const line = document.createElement('div');
+  line.className = 'row ' + (s.fault?'fault':'hit') + ' cur';
+  const frameStr = '[' + s.slots.filter(x=>x!==null).join(',') + ']';
+  line.textContent = String(i+1).padStart(3,'0') + ' | ref=' + String(s.p).padEnd(3) +
+    (s.fault ? 'FAULT ' : ' hit  ') +
+    'evict=' + (s.evicted===-1?'- ':String(s.evicted)).padEnd(3) + ' frames=' + frameStr;
+  const prev = el('log').querySelector('.cur');
+  if(prev) prev.classList.remove('cur');
+  el('log').appendChild(line);
+  el('log').scrollTop = el('log').scrollHeight;
+}
+
+function highlightTape(){
+  el('tape').querySelectorAll('.chip').forEach((c,i)=>{
+    c.classList.toggle('now', i===cursor);
+    c.classList.toggle('past', i<cursor);
+  });
+  const now = el('tape').querySelector('.chip.now');
+  if(now) now.scrollIntoView({inline:'center', block:'nearest'});
+}
+
+function step(){
+  if(cursor >= steps.length-1) { stopPlay(); return false; }
+  cursor++;
+  appendLog(cursor);
+  highlightTape();
+  renderFrames();
+  renderStats();
+  return true;
+}
+
+function stopPlay(){
+  clearInterval(timer); timer=null;
+  el('playBtn').textContent = '▶ play';
+}
+
+el('applyBtn').onclick = build;
+el('randomBtn').onclick = () => {
+  const len = 20, space = 6;
+  const arr = [];
+  let cur = Math.floor(Math.random()*space);
+  for(let i=0;i<len;i++){
+    if(i>0 && Math.random()<0.7){ cur = ((cur + Math.floor(Math.random()*5)-2) % space + space) % space; }
+    else { cur = Math.floor(Math.random()*space); }
+    arr.push(cur);
+  }
+  el('refInput').value = arr.join(',');
+  build();
+};
+el('resetBtn').onclick = build;
+el('stepBtn').onclick = step;
+el('playBtn').onclick = () => {
+  if(timer){ stopPlay(); return; }
+  if(cursor >= steps.length-1) build();
+  el('playBtn').textContent = '⏸ pause';
+  timer = setInterval(() => { if(!step()) stopPlay(); }, parseInt(el('speed').value));
+};
+el('algoSeg').onclick = (e) => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  el('algoSeg').querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  algo = btn.dataset.algo;
+  build();
+};
+
+build();
+</script>
+</body>
+</html>
