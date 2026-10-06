@@ -139,7 +139,7 @@ footer{margin-top:16px; color:var(--dim2); font-size:11.5px;}
           <button data-algo="fifo" class="active">FIFO</button>
           <button data-algo="lru">LRU</button>
           <button data-algo="opt">OPT</button>
-          <button data-algo="clock">CLOCK</button>
+          <button data-algo="lfu">LFU</button>
         </div>
       </div>
       <div class="field">
@@ -218,23 +218,25 @@ function simulate(algo, refs, n){
       }
       steps.push({p,fault,evicted,slots:pad(frames,n)});
     }
-  } else if(algo==='clock'){
-    let frames=new Array(n).fill(null), ref=new Array(n).fill(false);
-    let hand=0, filled=0;
+  } else if(algo==='lfu'){
+    let frames=[], frequency=new Map();
     for(let i=0;i<refs.length;i++){
       const p=refs[i]; let fault=false, evicted=-1;
       const idx=frames.indexOf(p);
-      if(idx>=0){ ref[idx]=true; }
+      if(idx>=0){ frequency.set(p,frequency.get(p)+1); }
       else{
         fault=true;
-        if(filled<n){ frames[filled]=p; ref[filled]=true; filled++; }
-        else{
-          while(ref[hand]){ ref[hand]=false; hand=(hand+1)%n; }
-          evicted=frames[hand]; frames[hand]=p; ref[hand]=true;
-          hand=(hand+1)%n;
+        if(frames.length>=n){
+          let victimIndex=0;
+          for(let j=1;j<frames.length;j++){
+            if(frequency.get(frames[j])<frequency.get(frames[victimIndex])) victimIndex=j;
+          }
+          evicted=frames.splice(victimIndex,1)[0];
+          frequency.delete(evicted);
         }
+        frames.push(p); frequency.set(p,1);
       }
-      steps.push({p,fault,evicted,slots:frames.slice(),refBits:ref.slice(),hand});
+      steps.push({p,fault,evicted,slots:pad(frames,n)});
     }
   }
   return steps;
@@ -284,16 +286,6 @@ function renderFrames(){
     }
     div.className = cls;
     div.innerHTML = `<div class="num">${v===null?'·':v}</div><div class="lbl">F${i}</div>`;
-    if(algo==='clock' && st){
-      const dot = document.createElement('div');
-      dot.className = 'dot' + (st.refBits && st.refBits[i] ? ' on' : '');
-      div.appendChild(dot);
-      if(st.hand===i){
-        const hand = document.createElement('div');
-        hand.className = 'hand'; hand.textContent = '▲ hand';
-        div.appendChild(hand);
-      }
-    }
     box.appendChild(div);
   }
 }

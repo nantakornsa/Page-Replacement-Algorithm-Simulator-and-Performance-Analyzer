@@ -3,7 +3,7 @@ package com.simulator.model;
 /**
  * Represents one row of a page table: whether the page is currently resident
  * (valid bit), which frame it occupies, and its reference bit (used by the
- * Clock/Second-Chance algorithm).
+ * page-replacement bookkeeping).
  */
 public class PageTableEntry {
 

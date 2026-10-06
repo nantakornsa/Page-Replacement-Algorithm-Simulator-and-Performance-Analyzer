@@ -1,7 +1,7 @@
 # Page Replacement Simulator
 
 A small Java CLI tool that simulates classic OS page-replacement algorithms —
-**FIFO**, **LRU**, **OPT (Optimal/Belady)**, and **Clock (Second-Chance)** —
+**FIFO**, **LRU**, **OPT (Optimal/Belady)**, and **LFU (Least-Frequently-Used)** —
 over a reference string, reports page faults / hit rate, and lets you compare
 algorithms side by side.
 
@@ -21,7 +21,7 @@ page-replacement-simulator/
 │   │   ├── FifoAlgorithm.java
 │   │   ├── LruAlgorithm.java
 │   │   ├── OptAlgorithm.java
-│   │   └── ClockAlgorithm.java
+│   │   └── LfuAlgorithm.java
 │   ├── engine/
 │   │   ├── MemoryEngine.java         # Drives a simulation run
 │   │   └── TraceGenerator.java       # Reads/generates reference strings
@@ -39,7 +39,7 @@ page-replacement-simulator/
 ## Web visualizer
 
 `web/index.html` is a self-contained, dependency-free HTML page that
-simulates FIFO / LRU / OPT / Clock step-by-step in the browser and shows a
+simulates FIFO / LRU / OPT / LFU step-by-step in the browser and shows a
 live execution log alongside the frame state. It's a visual companion to the
 CLI, not a replacement for it — the two are independent (the page reimplements
 the same algorithm logic in JavaScript, it doesn't call the Java code).
@@ -88,7 +88,7 @@ Using a generated synthetic trace:
 
 ```bash
 java -jar target/page-replacement-simulator-jar-with-dependencies.jar \
-  --frames 4 --generate 30 --pages 8 --locality 0.8 --seed 7 --algo fifo,lru,opt,clock
+  --frames 4 --generate 30 --pages 8 --locality 0.8 --seed 7 --algo fifo,lru,opt,lfu
 ```
 
 ### CLI options
@@ -97,7 +97,7 @@ java -jar target/page-replacement-simulator-jar-with-dependencies.jar \
 |--------------|------------------------------------------------------------|---------|
 | `--frames N` | Number of physical frames                                  | 3       |
 | `--trace F`  | Path to a trace file (overrides `--generate`)               | -       |
-| `--algo L`   | Comma list: `fifo,lru,opt,clock` or `all`                  | all     |
+| `--algo L`   | Comma list: `fifo,lru,opt,lfu` or `all`                  | all     |
 | `--generate N` | Length of synthetic reference string to generate         | 20      |
 | `--pages N`  | Distinct virtual pages used when generating                 | 10      |
 | `--locality D` | Locality bias 0.0–1.0 when generating                     | 0.7     |
@@ -127,6 +127,6 @@ expected fault counts: FIFO = 15, LRU = 12, OPT = 9 (the theoretical minimum).
   the future (or never happens again). It requires full foreknowledge of the
   reference string and is used only as a theoretical lower bound — no real OS
   can implement it online.
-- **Clock** (Second-Chance) approximates LRU cheaply using a circular buffer
-  and a single reference bit per frame, avoiding the overhead of tracking
-  exact recency.
+- **LFU** evicts the resident page with the fewest references since it entered
+  memory. If frequencies tie, the page that entered memory earliest is evicted
+  (FIFO tie-breaker).

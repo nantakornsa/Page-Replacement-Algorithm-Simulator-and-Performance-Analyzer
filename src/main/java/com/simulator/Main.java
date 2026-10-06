@@ -1,7 +1,7 @@
 package com.simulator;
 
-import com.simulator.algorithm.ClockAlgorithm;
 import com.simulator.algorithm.FifoAlgorithm;
+import com.simulator.algorithm.LfuAlgorithm;
 import com.simulator.algorithm.LruAlgorithm;
 import com.simulator.algorithm.OptAlgorithm;
 import com.simulator.algorithm.PageReplacementAlgorithm;
@@ -21,7 +21,7 @@ import java.util.Map;
  * Command-line entry point for the page replacement simulator.
  *
  * Usage examples:
- *   java -jar page-replacement-simulator.jar --frames 3 --algo fifo,lru,opt,clock \
+ *   java -jar page-replacement-simulator.jar --frames 3 --algo fifo,lru,opt,lfu \
  *        --trace traces/sample.txt
  *
  *   java -jar page-replacement-simulator.jar --frames 4 --algo all \
@@ -90,7 +90,7 @@ public class Main {
         registry.put("fifo", new FifoAlgorithm());
         registry.put("lru", new LruAlgorithm());
         registry.put("opt", new OptAlgorithm());
-        registry.put("clock", new ClockAlgorithm());
+        registry.put("lfu", new LfuAlgorithm());
         return registry;
     }
 
@@ -105,7 +105,7 @@ public class Main {
             PageReplacementAlgorithm algo = registry.get(name.toLowerCase());
             if (algo == null) {
                 throw new CliOptions.CliException("Unknown algorithm: " + name
-                        + " (expected one of fifo, lru, opt, clock, all)");
+                        + " (expected one of fifo, lru, opt, lfu, all)");
             }
             selected.add(algo);
         }
@@ -184,7 +184,7 @@ public class Main {
                     Options:
                       --frames N        Number of physical frames (default: 3)
                       --trace FILE      Path to a trace file of page numbers (overrides --generate)
-                      --algo LIST       Comma-separated: fifo,lru,opt,clock or "all" (default: all)
+                      --algo LIST       Comma-separated: fifo,lru,opt,lfu or "all" (default: all)
                       --generate N      Length of a synthetic reference string to generate (default: 20)
                       --pages N         Distinct virtual page numbers for generation (default: 10)
                       --locality D      Locality bias 0.0-1.0 for generation (default: 0.7)

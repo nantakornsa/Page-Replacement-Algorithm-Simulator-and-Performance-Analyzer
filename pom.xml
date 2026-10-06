@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>Page Replacement Simulator</name>
-    <description>CLI simulator for OS page replacement algorithms (FIFO, LRU, OPT, Clock)</description>
+    <description>CLI simulator for OS page replacement algorithms (FIFO, LRU, OPT, LFU)</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

@@ -2,12 +2,12 @@ package com.simulator.algorithm;
 
 /**
  * Strategy-pattern interface implemented by every page replacement policy
- * (FIFO, LRU, OPT, Clock). Each implementation replays a full reference
+ * (FIFO, LRU, OPT, LFU). Each implementation replays a full reference
  * string against a fixed number of frames and returns a {@link SimulationResult}.
  */
 public interface PageReplacementAlgorithm {
 
-    /** Human readable name, e.g. "FIFO", "LRU", "OPT", "CLOCK". */
+    /** Human readable name, e.g. "FIFO", "LRU", "OPT", "LFU". */
     String getName();
 
     /**
